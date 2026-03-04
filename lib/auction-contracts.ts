@@ -140,6 +140,56 @@ export const SILENTBID_ABI = [
     outputs: [],
     stateMutability: "payable",
   },
+  // CRE finalization hooks (admin only)
+  {
+    type: "function",
+    name: "finalizeFromCRE",
+    inputs: [
+      { name: "auctionId", type: "uint256" },
+      { name: "clearingPrice", type: "uint256" },
+      { name: "totalRaised", type: "uint256" },
+      { name: "proofOrMetadata", type: "bytes" },
+    ],
+    outputs: [],
+    stateMutability: "nonpayable",
+  },
+  {
+    type: "function",
+    name: "linkOffchainBid",
+    inputs: [
+      { name: "auctionId", type: "uint256" },
+      { name: "offchainBidId", type: "bytes32" },
+      { name: "onchainDepositId", type: "uint256" },
+    ],
+    outputs: [],
+    stateMutability: "nonpayable",
+  },
+  {
+    type: "function",
+    name: "forwardBidToCCA",
+    inputs: [
+      { name: "blindBidId", type: "uint256" },
+      { name: "clearMaxPrice", type: "uint256" },
+      { name: "clearAmount", type: "uint128" },
+      { name: "owner", type: "address" },
+      { name: "hookData", type: "bytes" },
+    ],
+    outputs: [],
+    stateMutability: "nonpayable",
+  },
+  {
+    type: "function",
+    name: "forwardBidsToCCA",
+    inputs: [
+      { name: "blindBidIds", type: "uint256[]" },
+      { name: "clearMaxPrices", type: "uint256[]" },
+      { name: "clearAmounts", type: "uint128[]" },
+      { name: "owners", type: "address[]" },
+      { name: "hookDatas", type: "bytes[]" },
+    ],
+    outputs: [],
+    stateMutability: "nonpayable",
+  },
   // Views
   { type: "function", name: "admin", inputs: [], outputs: [{ type: "address" }], stateMutability: "view" },
   { type: "function", name: "cca", inputs: [], outputs: [{ type: "address" }], stateMutability: "view" },
@@ -165,6 +215,24 @@ export const SILENTBID_ABI = [
       { name: "silentBidId", type: "uint256", indexed: true },
       { name: "bidder", type: "address", indexed: true },
       { name: "bidCommitment", type: "bytes32", indexed: false },
+    ],
+  },
+  {
+    type: "event",
+    name: "AuctionFinalized",
+    inputs: [
+      { name: "auctionId", type: "uint256", indexed: true },
+      { name: "clearingPrice", type: "uint256", indexed: false },
+      { name: "totalRaised", type: "uint256", indexed: false },
+    ],
+  },
+  {
+    type: "event",
+    name: "BidForwarded",
+    inputs: [
+      { name: "blindBidId", type: "uint256", indexed: true },
+      { name: "owner", type: "address", indexed: true },
+      { name: "clearAmount", type: "uint128", indexed: false },
     ],
   },
 ] as const

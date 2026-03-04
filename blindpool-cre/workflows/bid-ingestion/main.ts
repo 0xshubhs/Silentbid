@@ -27,7 +27,6 @@ const configSchema = z.object({
   chainId: z.number(),
   silentBidDomainName: z.string(),
   silentBidDomainVersion: z.string(),
-  verifyingContract: z.string(),
   complianceApiUrl: z.string().optional(),
   complianceApiKeyOwner: z.string().optional(),
 })
@@ -35,12 +34,12 @@ const configSchema = z.object({
 type Config = z.infer<typeof configSchema>
 
 const EIP712_TYPES = {
-  SilentBidBid: [
+  Bid: [
     { name: "sender", type: "address" },
     { name: "auctionId", type: "address" },
     { name: "maxPrice", type: "uint256" },
     { name: "amount", type: "uint256" },
-    { name: "flags", type: "string[]" },
+    { name: "flags", type: "uint256" },
     { name: "timestamp", type: "uint256" },
   ] as const,
 }
@@ -50,7 +49,7 @@ type BidPayload = {
   auctionId: string
   maxPrice: string
   amount: string
-  flags?: string[]
+  flags?: string
   timestamp: string
   auth: string
 }
@@ -70,7 +69,7 @@ function computeBidCommitment(
   )
 }
 
-const onBidRequest = (runtime: Runtime<Config>, payload: HTTPPayload): string => {
+const onBidRequest = async (runtime: Runtime<Config>, payload: HTTPPayload): Promise<string> => {
   if (!payload.input || payload.input.length === 0) {
     runtime.log("Empty request body")
     throw new Error("Empty request body")
@@ -82,14 +81,15 @@ const onBidRequest = (runtime: Runtime<Config>, payload: HTTPPayload): string =>
   const maxPrice = BigInt(raw.maxPrice)
   const amount = BigInt(raw.amount)
   const timestamp = BigInt(raw.timestamp)
-  const flags = raw.flags ?? []
+  const flags = BigInt(raw.flags ?? "0")
   const auth = raw.auth as Hex
 
+  // Domain matches frontend SILENTBID_DOMAIN (no verifyingContract — domain separator
+  // is name + version + chainId only; the contract address is part of the bid message).
   const domain = {
     name: runtime.config.silentBidDomainName,
     version: runtime.config.silentBidDomainVersion,
     chainId: runtime.config.chainId,
-    verifyingContract: runtime.config.verifyingContract as Hex,
   }
 
   const message = {
@@ -104,11 +104,11 @@ const onBidRequest = (runtime: Runtime<Config>, payload: HTTPPayload): string =>
   // Skip verification when auth is placeholder (e.g. simulation); in production require valid EIP-712.
   const isPlaceholder = !auth || auth === "0x" || auth.length < 130
   if (!isPlaceholder) {
-    const valid = verifyTypedData({
+    const valid = await verifyTypedData({
       address: sender,
       domain,
       types: EIP712_TYPES,
-      primaryType: "SilentBidBid",
+      primaryType: "Bid",
       message,
       signature: auth,
     })

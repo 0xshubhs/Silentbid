@@ -2,11 +2,11 @@
 
 import { useState, useEffect } from "react"
 import { cn } from "@/lib/utils"
-import { useAccount, usePublicClient, useWriteContract, useWaitForTransactionReceipt } from "wagmi"
+import { useAccount, usePublicClient, useWriteContract, useWaitForTransactionReceipt, useSignTypedData } from "wagmi"
 import { parseEther, type Address } from "viem"
 import { AUCTION_ABI, SILENTBID_ABI, ethToQ96, snapToTickBoundary } from "@/lib/auction-contracts"
-import { computeBidCommitment } from "@/lib/cre-bid"
-import { chainId } from "@/lib/chain-config"
+import { computeBidCommitment, buildBidTypedData } from "@/lib/cre-bid"
+import { chainId, IS_ANVIL } from "@/lib/chain-config"
 
 const inputClass = cn(
   "mt-2 w-full border border-border bg-input/50 px-4 py-3 font-mono text-sm",
@@ -43,6 +43,8 @@ export function PlaceBidForm({
   const [maxPrice, setMaxPrice] = useState("")
   const [error, setError] = useState<string | null>(null)
   const [simulating, setSimulating] = useState(false)
+  const [signingBid, setSigningBid] = useState(false)
+  const { signTypedDataAsync } = useSignTypedData()
 
   const { data: txHash, writeContract, isPending: isWriting, reset: resetWrite, error: writeError } = useWriteContract()
 
@@ -51,7 +53,7 @@ export function PlaceBidForm({
   })
 
   const hookError = writeError || receiptError
-  const submitted = simulating || isWriting || (isConfirming && !hookError)
+  const submitted = signingBid || simulating || isWriting || (isConfirming && !hookError)
 
   const isEncrypted = !!silentBidAddress
 
@@ -91,7 +93,7 @@ export function PlaceBidForm({
 
     const amountWei = parseEther(amount)
 
-    // ── CRE sealed-bid path: SilentBid (commitment only onchain) ──
+    // ── CRE sealed-bid path: SilentBid (EIP-712 sign + commitment onchain) ──
     if (isEncrypted && silentBidAddress) {
       const rawQ96 = ethToQ96(maxPrice)
       if (rawQ96 === BigInt(0)) {
@@ -99,11 +101,66 @@ export function PlaceBidForm({
         return
       }
       const maxPriceQ96 = snapToTickBoundary(rawQ96, tickSpacing)
+      const timestamp = BigInt(Math.floor(Date.now() / 1000))
+
+      // Step 1: EIP-712 sign the bid
+      setSigningBid(true)
+      let signature: `0x${string}`
+      try {
+        const typedData = buildBidTypedData({
+          sender: address,
+          auctionId: auctionId as `0x${string}`,
+          maxPrice: maxPriceQ96,
+          amount: amountWei,
+          timestamp,
+        })
+        signature = await signTypedDataAsync({
+          domain: typedData.domain,
+          types: typedData.types,
+          primaryType: typedData.primaryType,
+          message: typedData.message,
+        })
+      } catch (signErr: unknown) {
+        setSigningBid(false)
+        const msg = signErr instanceof Error ? signErr.message : String(signErr)
+        setError(`Bid signing failed: ${msg}`)
+        return
+      }
+
+      // Step 2: Send signed bid to CRE endpoint
+      try {
+        const res = await fetch("/api/cre/bid", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            sender: address,
+            auctionId,
+            maxPrice: maxPriceQ96.toString(),
+            amount: amountWei.toString(),
+            flags: "0",
+            timestamp: timestamp.toString(),
+            signature,
+          }),
+        })
+        if (!res.ok) {
+          const body = await res.text()
+          throw new Error(body || `CRE returned ${res.status}`)
+        }
+      } catch (creErr: unknown) {
+        setSigningBid(false)
+        const msg = creErr instanceof Error ? creErr.message : String(creErr)
+        setError(`CRE bid submission failed: ${msg}`)
+        return
+      }
+      setSigningBid(false)
+
+      // Step 3: Submit onchain commitment
       const commitment = computeBidCommitment(
         auctionId as `0x${string}`,
         address,
         maxPriceQ96,
-        amountWei
+        amountWei,
+        timestamp
       )
       writeContract({
         address: silentBidAddress,
@@ -287,29 +344,29 @@ export function PlaceBidForm({
       <button
         type="submit"
         disabled={submitted || !amount || !maxPrice || !isConnected}
-        aria-busy={isWriting || isConfirming}
+        aria-busy={signingBid || isWriting || isConfirming}
         className={cn(
           "mt-4 border border-foreground/20 px-6 py-3 font-mono text-xs uppercase tracking-widest",
           "hover:border-accent hover:text-accent transition-all duration-200 disabled:opacity-50 disabled:pointer-events-none",
         )}
       >
-        {encrypting
-          ? "Encrypting bid..."
-          : simulating
-            ? "Simulating..."
-            : isWriting
-              ? "Confirm in wallet..."
-              : isConfirming && !hookError
-                ? "Confirming..."
-                : isSuccess
-                  ? "Bid placed"
-                  : hookError
-                    ? "Try again"
-                    : isEncrypted
-                      ? IS_ANVIL
-                        ? "Submit mock blind bid"
-                        : "Submit encrypted bid"
-                      : "Submit bid"}
+        {signingBid
+            ? "Sign bid..."
+            : simulating
+              ? "Simulating..."
+              : isWriting
+                ? "Submitting commitment..."
+                : isConfirming && !hookError
+                  ? "Confirming..."
+                  : isSuccess
+                    ? "Bid placed"
+                    : hookError
+                      ? "Try again"
+                      : isEncrypted
+                        ? IS_ANVIL
+                          ? "Submit mock blind bid"
+                          : "Submit encrypted bid"
+                        : "Submit bid"}
       </button>
 
       <div className="mt-4 font-mono text-[10px] text-muted-foreground/70 border border-border/40 px-3 py-2 space-y-1">

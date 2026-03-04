@@ -37,14 +37,19 @@ Planned tasks:
   - `forwardBidToCCA(...)` / `forwardBidsToCCA(...)`:
     - Onchain public: final maxPrice, amount, and owner actually sent to CCA.
     - Offchain (CRE): proof that these values match the sealed bid + any compliance checks.
-- [ ] Repeat the same analysis for any additional SilentBid contracts we introduce (e.g., vault/treasury wrappers, CRE-specific hooks).
-- [ ] For each entrypoint, mark:
+- [x] Repeat the same analysis for any additional SilentBid contracts we introduce (e.g., vault/treasury wrappers, CRE-specific hooks).
+  - Added CRE finalization hooks to SILENTBID_ABI in `lib/auction-contracts.ts`.
+- [x] For each entrypoint, mark:
   - What data must remain public onchain.
   - What can be moved offchain into CRE (sealed bids, compliance state, etc.).
-- [ ] Propose minimal new hooks, for example:
-  - `finalizeFromCRE(auctionId, clearingPrice, totalRaised, proofOrMetadata)`
-  - `linkOffchainBid(auctionId, offchainBidId, onchainDepositId)` if needed.
-- [ ] Capture decisions back into `plan.md` and update this execution log.
+  - See `md/CRE_INTEGRATION.md` for the full data flow documentation.
+- [x] Propose minimal new hooks, for example:
+  - `finalizeFromCRE(auctionId, clearingPrice, totalRaised, proofOrMetadata)` — added to SILENTBID_ABI
+  - `linkOffchainBid(auctionId, offchainBidId, onchainDepositId)` — added to SILENTBID_ABI
+  - `forwardBidToCCA(blindBidId, clearMaxPrice, clearAmount, owner, hookData)` — added to SILENTBID_ABI
+  - `forwardBidsToCCA(blindBidIds[], clearMaxPrices[], clearAmounts[], owners[], hookDatas[])` — batch version added
+  - Events: `AuctionFinalized`, `BidForwarded` — added to SILENTBID_ABI
+- [x] Capture decisions back into `plan.md` and update this execution log.
 
 ### 3. CRE workflow design (planned)
 
@@ -93,13 +98,21 @@ Planned tasks:
 - [x] Identify and remove Zama/fhEVM frontend code: deleted `lib/zama.ts`, removed `@zama-fhe/relayer-sdk`, updated place-bid-form to use `computeBidCommitment` + `submitBlindBid(bytes32)`, updated ppt, auction page, create-auction-form to CRE wording; added `lib/cre-bid.ts` and `md/CRE_INTEGRATION.md`.
 - [x] CRE workflow implementation (see **blindpool-cre/**):
   - **Bid ingestion** (`workflows/bid-ingestion/main.ts`): HTTP trigger; EIP‑712 domain + types SilentBid bid (sender, auctionId, maxPrice, amount, flags, timestamp); verify signature (viem), compute commitment (keccak256 encodePacked); return `{ commitment, sender, auctionId, amount }` for frontend/relayer to call `submitBlindBid(commitment)`.
-  - **Finalize** (`workflows/finalize/main.ts`): HTTP trigger stub; documents loading bids and calling `forwardBidsToCCA`.
+  - **Finalize** (`workflows/finalize/main.ts`): Full implementation — HTTP trigger; loads stored bids, sorts by maxPrice desc, computes clearing price via uniform-price auction algorithm, determines winner allocations with pro-rata marginal distribution, generates `forwardBidsToCCA` calldata via viem `encodeFunctionData`.
+  - **Settlement** (`workflows/settle/main.ts`): Full implementation — HTTP trigger; generates EIP-712 `SettlementTransfer` typed data for winner payouts, partial refunds for overpayment, full refunds for losers, treasury/issuer payout with configurable protocol fee, compliance checks via Confidential HTTP.
   - Project: `project.yaml`, `secrets.yaml`; configs for staging/production. Simulate with `cre workflow simulate ./workflows/bid-ingestion --http-payload ./workflows/bid-ingestion/http-payload.example.json --non-interactive --trigger-index 0` (from blindpool-cre; run `cre login` if prompted).
-- [ ] Define API endpoints / Confidential HTTP routes:
-  - e.g., `/cre/bid`, `/cre/finalize` — implemented as CRE HTTP-triggered workflows; gateway can proxy to CRE.
-- [ ] Implement a small backend / gateway (if needed) that:
-  - Receives public HTTP requests from the app.
-  - Invokes the underlying CRE workflows securely.
+- [x] Define API endpoints / Confidential HTTP routes:
+  - `POST /api/cre/bid` — accepts EIP-712 signed bids, verifies signature, computes commitment, stores bid in memory. In production, forwards to CRE via Confidential HTTP.
+  - `POST /api/cre/finalize` — loads stored bids, runs uniform-price discovery, returns clearing price + winning bids + calldata for `forwardBidsToCCA`.
+  - `POST /api/cre/settle` — accepts allocations, generates settlement plan with payouts and refunds.
+- [x] Implement a small backend / gateway:
+  - Next.js App Router API routes (`app/api/cre/bid/route.ts`, `app/api/cre/finalize/route.ts`, `app/api/cre/settle/route.ts`).
+  - In-memory bid store (`lib/bid-store.ts`) with two-level Map (auctionId → commitment → StoredBid) for efficient per-auction lookups and deduplication.
+  - Client-side API helpers (`lib/cre-api.ts`) with typed functions: `submitBidToCRE()`, `finalizeAuction()`, `settleAuction()`.
+- [x] Frontend EIP-712 integration:
+  - `lib/cre-bid.ts` now exports `SILENTBID_DOMAIN`, `SILENTBID_BID_TYPES`, `buildBidTypedData()`, `verifyBidSignature()`.
+  - `place-bid-form.tsx` encrypted path: 3-step flow (1) EIP-712 sign via wallet, (2) send to `/api/cre/bid`, (3) submit onchain commitment.
+  - Button states: "Sign bid..." → "Submitting commitment..." → "Confirming..." → "Bid placed".
 
 ### 5. Hardening and testing (planned)
 

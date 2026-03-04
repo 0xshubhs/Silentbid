@@ -29,6 +29,7 @@ function statusLabel(s: AuctionStatus) {
 const STATUS_ORDER: Record<AuctionStatus, number> = { active: 0, upcoming: 1, ended: 2 }
 
 function blocksToTime(blocks: bigint): string {
+  if (blocks <= 0n) return "0s"
   const seconds = Number(blocks) * 12
   if (seconds < 60) return `${seconds}s`
   if (seconds < 3600) return `${Math.round(seconds / 60)}m`

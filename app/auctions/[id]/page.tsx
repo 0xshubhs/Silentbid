@@ -31,6 +31,7 @@ function statusLabel(s: AuctionStatus) {
 }
 
 function blocksToTime(blocks: bigint): string {
+  if (blocks <= 0n) return "0s"
   const seconds = Number(blocks) * 12
   if (seconds < 60) return `${seconds}s`
   if (seconds < 3600) return `${Math.round(seconds / 60)}m`
