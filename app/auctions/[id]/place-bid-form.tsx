@@ -364,7 +364,7 @@ export function PlaceBidForm({
                       ? "Try again"
                       : isEncrypted
                         ? IS_ANVIL
-                          ? "Submit mock blind bid"
+                          ? "Submit blind bid (local)"
                           : "Submit encrypted bid"
                         : "Submit bid"}
       </button>
@@ -374,7 +374,7 @@ export function PlaceBidForm({
           <>
             <p>
               {IS_ANVIL
-                ? <>Calls <code>mockSubmitBlindBid(maxPrice, amount)</code> on the SilentBid contract with <code>msg.value = amount</code>.</>
+                ? <>Calls <code>submitSilentBid(commitment)</code> on the SilentBid contract with <code>msg.value = amount</code> (local Anvil).</>
                 : <>Calls <code>submitBlindBid(commitment)</code> on the SilentBid contract with <code>msg.value = amount</code>.</>
               }
             </p>

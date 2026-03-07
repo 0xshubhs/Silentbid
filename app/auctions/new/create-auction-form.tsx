@@ -33,7 +33,8 @@ const FACTORY_ABI = [
   },
 ] as const
 
-const MOCK_TOKEN = "0xc4aAE767E65a18bF381c3159e58b899CA7f8561F" as const
+/** Default token address from env or fallback to latest deployed ERC20 */
+const DEFAULT_SEPOLIA_TOKEN = (process.env.NEXT_PUBLIC_DEFAULT_TOKEN ?? "0x9D3B8A874b173DA351C026132319459C957D1528") as `0x${string}`
 
 const DURATION_OPTIONS = [
   { value: "5m", label: "5 min (testing)", blocks: 25 },
@@ -115,7 +116,7 @@ export function CreateAuctionForm() {
   const [description, setDescription] = useState("")
 
   // Onchain params
-  const [tokenAddress, setTokenAddress] = useState(MOCK_TOKEN as string)
+  const [tokenAddress, setTokenAddress] = useState(DEFAULT_SEPOLIA_TOKEN as string)
   const [totalSupply, setTotalSupply] = useState("")
   const [reservePrice, setReservePrice] = useState("")
   const [duration, setDuration] = useState<string>("5m")

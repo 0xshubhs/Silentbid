@@ -16,7 +16,7 @@ cre login   # required for deploy; simulate can run without login with --non-int
 - **project.yaml** — RPC targets (Sepolia).
 - **secrets.yaml** — Maps DON secret names to env vars (e.g. `CRE_ETH_PRIVATE_KEY`).
 - **workflows/bid-ingestion** — POST /cre/bid: accept EIP-712 signed bid, verify, compute commitment, return for SilentBid `BlindPoolCCA.submitBlindBid(commitment)`.
-- **workflows/finalize** — POST /cre/finalize: stub; in production loads bids, computes clearing, calls `forwardBidsToCCA`.
+- **workflows/finalize** — POST /cre/finalize: loads bids, runs uniform-price discovery, computes clearing price, and returns calldata for `forwardBidsToCCA`.
 
 ## Bid ingestion workflow
 
@@ -45,7 +45,7 @@ cre login   # required for deploy; simulate can run without login with --non-int
 
 ## Finalize workflow
 
-Stub that logs `auctionId` and returns a message. Full version would load bids (from CRE store or Confidential HTTP), run price discovery, and call `forwardBidsToCCA` via admin key or CRE consumer contract.
+Loads all stored bids for the auction, runs uniform-price discovery (sort by maxPrice desc, clearing price = lowest winning bid), and returns the clearing price, winning bids, and calldata hash for `forwardBidsToCCA`. The Next.js API route (`/api/cre/finalize`) implements this fully; the CRE workflow version calls the same logic via Confidential HTTP.
 
 Simulate:
 

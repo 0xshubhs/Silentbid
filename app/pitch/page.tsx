@@ -144,7 +144,7 @@ const SLIDES = [
           <ul className="space-y-2 text-sm">
             <Bullet label="Create auction" text="CCA + fund + activate + deploy SilentBid in one flow." />
             <Bullet label="Sealed bid" text="Price + amount → commitment → submitSilentBid + escrow (hash only on-chain)." />
-            <Bullet label="CRE" text="Bid ingestion + finalize stub; full path: CRE → forwardBidsToCCA." />
+            <Bullet label="CRE" text="Bid ingestion + finalize + settle; full path: CRE → forwardBidsToCCA." />
           </ul>
         </SlideSection>
         <p className="text-center pt-2">
