@@ -1,12 +1,10 @@
 # SilentBid
 
-**Privacy-focused fork of Uniswap's Continuous Clearing Auction (CCA) with sealed-bid configuration.**
+**Privacy-focused fork of Uniswap's Continuous Clearing Auction (CCA) with sealed-bid configuration.** Bids stay private until the auction closes; settlement and liquidity bootstrapping follow the same flow as CCA.
 
-Demo video - https://youtu.be/dnrUvJf2Mg4
+**Contract & scripts:** [Silentbid-scripts](https://github.com/ayushsingh82/Silentbid-scripts) — deploy CCA, deploy SilentBid wrappers, submit bids, check status, and CRE finalize.
 
-Pitch - https://blind-pool.vercel.app/ppt
-
-Contract Scripts Repo - https://github.com/ayushsingh82/BlindPool-scripts (SilentBid contracts)
+---
 
 ## TODO
 
@@ -40,20 +38,15 @@ Build, simulate, or deploy a **CRE Workflow** that's used as an orchestration la
 
 ## What It Is
 
-[Uniswap's Continuous Clearing Auction (CCA)](https://docs.uniswap.org/) is a mechanism for **fair, continuous price discovery** and **liquidity bootstrapping** for a new token — all onchain and permissionless. Bids are automatically integrated over time to determine a market-clearing price and seed liquidity into a Uniswap pool when the auction ends.
+[Uniswap's Continuous Clearing Auction (CCA)](https://docs.uniswap.org/) provides **fair, continuous price discovery** and **liquidity bootstrapping** for a new token — onchain and permissionless. Bids are integrated over time to determine a market-clearing price and seed liquidity into a Uniswap pool when the auction ends.
 
-**SilentBid** extends CCA by adding **sealed-bid / confidentiality features**: participants submit bids **privately**, so no one else (including bots or MEV actors) can see bid prices or identities before the auction closes. It resembles sealed-bid auctions in traditional finance, but built for onchain DeFi. Research in confidentiality on blockchains points toward **confidential compute** or **zero-knowledge (ZK)** techniques for this kind of privacy.
+**SilentBid** adds **sealed-bid privacy** on top of CCA: participants submit bids privately so no one (validators, MEV bots, other bidders) can see bid prices or amounts before the auction closes. It uses **Chainlink Confidential Compute** and **CRE Confidential HTTP** so sensitive bid data stays offchain until settlement.
 
 ## Why It Matters
 
-- **Reduces pre-bid sniping and front-running** — Bids stay hidden until the auction closes.
-- **Prevents leakage of strategic bid information** that can be exploited by MEV bots.
-- **Brings a more equitable token launch experience** — Fairer access for all participants.
-
-## Risks & Challenges
-
-- **Cryptographic privacy** — Must integrate ZK proofs and/or confidential compute.
-- **Onchain enforceability and fairness** — Confidentiality must be verifiable and enforceable onchain.
+- **No pre-bid sniping or front-running** — Bids stay hidden until the auction closes.
+- **MEV-resistant** — Strategic bid data is not visible onchain during the auction.
+- **Fairer token launches** — Equitable participation without information leakage.
 
 ---
 
@@ -126,22 +119,23 @@ npm install
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) to view the SilentBid app.
+Open [http://localhost:3000](http://localhost:3000) to view the app.
 
-**WalletConnect (optional):** For production wallet connect, set `NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID` in `.env.local` with your [WalletConnect Cloud](https://cloud.walletconnect.com/) project ID. The app runs without it; RainbowKit may show a placeholder until set.
+**Optional:** Set `NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID` in `.env.local` for production wallet connect ([WalletConnect Cloud](https://cloud.walletconnect.com/)). The app runs without it; RainbowKit may show a placeholder until configured.
 
 ## Scripts & Testing
 
 Scripts for deploying SilentBid, CCA auctions, and testing on Sepolia (Foundry):
 
-- **[BlindPool-scripts](https://github.com/ayushsingh82/BlindPool-scripts)** — Deploy CCA, deploy SilentBid (SilentBidCCA/SilentBidFactory), submit bids, check status, CRE finalize. See the repo README for setup and usage.
+- **[Silentbid-scripts](https://github.com/ayushsingh82/Silentbid-scripts)** — Deploy CCA, deploy SilentBid (BlindPoolCCA / BlindPoolFactory), submit bids, check status, and CRE finalize. See the repo README for setup and usage.
 
 ## Learn More
 
 - [Uniswap CCA Documentation](https://docs.uniswap.org/)
 - [CCA Contract & Technical Reference](https://github.com/Uniswap/continuous-clearing-auction)
+- [Chainlink CRE / Confidential Compute](https://docs.chain.link/cre)
 - [Next.js Documentation](https://nextjs.org/docs)
 
 ---
 
-© 2025 SilentBid. Privacy-first CCA. Sealed-bid token launches.
+© 2025 SilentBid — privacy-first CCA, sealed-bid token launches.

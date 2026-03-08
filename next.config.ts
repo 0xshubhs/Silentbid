@@ -24,6 +24,11 @@ const nextConfig: NextConfig = {
     config.resolve.fallback = {
       ...config.resolve.fallback,
       "@react-native-async-storage/async-storage": false,
+      // Optional RainbowKit/wagmi connectors (not installed); avoid build warnings
+      "@coinbase/wallet-sdk": false,
+      "@gemini-wallet/core": false,
+      "porto": false,
+      "porto/internal": false,
     };
     return config;
   },
