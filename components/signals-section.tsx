@@ -30,8 +30,8 @@ const signals = [
   },
   {
     date: "2025.04.12",
-    title: "ZK / Confidential Compute",
-    note: "Privacy via zero-knowledge proofs or confidential compute. Onchain enforceability.",
+    title: "Chainlink CRE",
+    note: "Privacy via Chainlink Runtime Environment and Confidential HTTP. Bids handled offchain; only commitments onchain.",
   },
 ]
 

@@ -33,9 +33,9 @@ const experiments = [
     span: "col-span-1 row-span-1",
   },
   {
-    title: "ZK / Confidential Compute",
-    medium: "Cryptography",
-    description: "Confidentiality via ZK proofs or confidential compute. Enforceable and fair.",
+    title: "Chainlink CRE",
+    medium: "Confidential Compute",
+    description: "Offchain CRE workflows handle bids privately via Confidential HTTP. Only commitments go onchain.",
     span: "col-span-2 row-span-1",
   },
   {
